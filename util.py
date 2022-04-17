@@ -1,12 +1,23 @@
 from matplotlib import pyplot as plt
 from matplotlib import dates as pld
-from datetime import date
 # https://pypi.org/project/yfinance/
 import yfinance as yf
-import pandas as pd
 import numpy as np
-import os
 
+
+class HyperParameters:
+    def __init__(self, alpha, batch_size, decay, max_epochs, k):
+        # Learning rate
+        self.alpha = alpha
+        # Batch size
+        self.batch_size = batch_size
+        # Weight decay for l2-regularization
+        self.decay = decay
+        # Max number of iterations
+        self.max_epochs = max_epochs
+        # Number of partitions for k-fold validation
+        self.k = k
+        
 
 class Config:
     TICKER = 'AAPL'
