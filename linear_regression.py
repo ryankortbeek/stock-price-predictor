@@ -1,20 +1,21 @@
 import numpy as np
 
-def lr_predict(X, w, t, hyperparams):
+
+def lr_predict(X, w, t):
     '''
     LINEAR REGRESSION
-    Given X, w, and t, predicts t_hat and calculates the corresponding loss (using mean square error) 
+    Given X, w, and t, predicts t_hat and calculates the corresponding loss (using mean square error)
     and risk (using mean absolute difference).
 
     X_new: N x (d + 1)
     w: (d + 1) x 1
-    t: N x 1 
+    t: N x 1
     '''
     t_hat = np.matmul(X, w)
     # Mean square error
-    loss = (1 / (2 * hyperparams.batch_size)) * np.linalg.norm(t_hat - t, 2) ** 2
+    loss = (1 / (2 * t.shape[0])) * np.linalg.norm(t_hat - t, 2) ** 2
     # Mean absolute difference
-    risk = (1 / hyperparams.batch_size) * np.linalg.norm(np.absolute(t_hat - t), 1)
+    risk = (1 / t.shape[0]) * np.linalg.norm(np.absolute(t_hat - t), 1)
 
     return t_hat, loss, risk
 
@@ -22,7 +23,7 @@ def lr_predict(X, w, t, hyperparams):
 def lr_train(X_train, t_train, X_val, t_val, hyperparams):
     '''
     LINEAR REGRESSION
-    Performs training and validation on the respective datasets passed in using mini-batch gradient 
+    Performs training and validation on the respective datasets passed in using mini-batch gradient
     descent with l2-regularization.
 
     X_train: N_train x (d + 1)
@@ -47,18 +48,25 @@ def lr_train(X_train, t_train, X_val, t_val, hyperparams):
         loss_this_epoch = 0
         for b in range(num_batches):
             # X_batch: batch_size x (d + 1)
-            X_batch = X_train[b * hyperparams.batch_size:(b + 1) * hyperparams.batch_size]
+            X_batch = X_train[b *
+                              hyperparams.batch_size:(b +
+                                                      1) *
+                              hyperparams.batch_size]
             # t_batch: batch_size x 1
-            t_batch = t_train[b * hyperparams.batch_size:(b + 1) * hyperparams.batch_size]
+            t_batch = t_train[b *
+                              hyperparams.batch_size:(b +
+                                                      1) *
+                              hyperparams.batch_size]
 
             # lr_predict t_hat
-            _, loss_batch, _ = lr_predict(X_batch, w, t_batch, hyperparams)
+            _, loss_batch, _ = lr_predict(X_batch, w, t_batch)
             loss_this_epoch += loss_batch
 
             # Mini-batch gradient descent
             X_batch_T = np.matrix.transpose(X_batch)
             # gradient = (1 / batch_size) * (X^(T)Xw - X^(T)t)
-            gradient = (1 / hyperparams.batch_size) * (np.matmul(np.matmul(X_batch_T, X_batch), w) - np.matmul(X_batch_T, t_batch))
+            gradient = (1 / hyperparams.batch_size) * \
+                (np.matmul(np.matmul(X_batch_T, X_batch), w) - np.matmul(X_batch_T, t_batch))
             # Use l2 regularization
             w = w - hyperparams.alpha * (gradient + hyperparams.decay * w)
 
@@ -66,7 +74,7 @@ def lr_train(X_train, t_train, X_val, t_val, hyperparams):
         training_loss = loss_this_epoch / num_batches
         losses_train.append(training_loss)
         # Perform validation on the validation set by the risk
-        _, _, risk_val = lr_predict(X_val, w, t_val, hyperparams)
+        _, _, risk_val = lr_predict(X_val, w, t_val)
         risks_val.append(risk_val)
         # Keep track of the best validation epoch, risk, and the weights
         if risk_val < risk_best:
