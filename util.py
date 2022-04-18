@@ -41,7 +41,7 @@ def get_data():
 def preprocess_data(data_arr):
     # Preprocess data - iterate chronologically
     # Get closing price of stock for previous 50 days as features
-    X = np.array([data_arr[i - Config.N:i - 1] for i in range(Config.N, len(data_arr))], dtype='float64')
+    X = np.array([data_arr[i - Config.N:i] for i in range(Config.N, len(data_arr))], dtype='float64')
     # Get actual closing price for the day as target
     t = np.array([data_arr[i] for i in range(Config.N, len(data_arr))], dtype='float64')
     return X, t
