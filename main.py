@@ -1,19 +1,24 @@
 import sys
+import numpy as np
+from sklearn.utils import shuffle
 from util import HyperParameters, get_data, normalize_data, denormalize_data, preprocess_data, plot_graph
 from linear_regression import lr_train, lr_predict
-from multi_layer_perceptron import mlp_train, do_forward_propagation, calc_loss_and_risk
-import numpy as np
+from multi_layer_perceptron import mlp_train, do_forward_pass, calc_loss_and_risk
+from lstm import lstm_train, lstm_predict
 
 
 class Algorithm:
+    '''
+    Supported algorithms.
+    '''
     LR = 0
     MLP = 1
     LSTM = 2
 
 
-def k_fold_validation(X_kfold, t_kfold, hyperparams, algorithm):
+def k_fold_validation(algorithm, X_kfold, t_kfold, hyperparams):
     '''
-    Performs k-fold validaiton on the passed in datasets.
+    Performs k-fold validation.
     '''
     risk_best = 10000
     training_data_local, training_data_best, alpha_best = None, None, None
@@ -29,14 +34,17 @@ def k_fold_validation(X_kfold, t_kfold, hyperparams, algorithm):
             t_train = np.concatenate(
                 (t_kfold[0:partition_size * i], t_kfold[partition_size * (i + 1):]))
             X_val = X_kfold[partition_size * i:partition_size * (i + 1)]
-            y_val = t_kfold[partition_size * i:partition_size * (i + 1)]
+            t_val = t_kfold[partition_size * i:partition_size * (i + 1)]
 
             if algorithm == Algorithm.LR:
                 training_data = lr_train(
-                    X_train, t_train, X_val, y_val, hyperparams)
+                    X_train, t_train, X_val, t_val, hyperparams)
             elif algorithm == Algorithm.MLP:
                 training_data = mlp_train(
-                    X_train, t_train, X_val, y_val, hyperparams)
+                    X_train, t_train, X_val, t_val, hyperparams)
+            elif algorithm == Algorithm.LSTM:
+                training_data = lstm_train(
+                    X_train, t_train, X_val, t_val, hyperparams)
             else:
                 print('Invalid algorithm!', file=sys.stderr)
                 sys.exit(1)
@@ -54,18 +62,8 @@ def k_fold_validation(X_kfold, t_kfold, hyperparams, algorithm):
     return training_data_best, alpha_best, risk_best
 
 
-# MAIN CODE
-# Hyperparameters
-hyperparams = HyperParameters(
-    alpha=0.0,
-    batch_size=500,
-    max_epochs=100,
-    k=10,
-    decay=0.05)
-alpha_values = [0.1, 0.05, 0.01, 0.005]
-# Other parameters
+# MAIN CODE---------------------------------------------------------------
 num_test_samples = 1000
-# Results
 w_best, epoch_best, risk_best = None, None, None
 
 # Get dataset
@@ -76,84 +74,192 @@ X, t, data_bounds = normalize_data(X, t)
 # Augment input data to include bias term
 X = np.hstack((np.ones([X.shape[0], 1]), X))
 
-# For the AAPL stock we have 10374 samples - will use 1374 for testing
+# Split train and test data
 X_train, X_test = X[:-num_test_samples], X[-num_test_samples:]
 t_train, t_test = t[:-num_test_samples], t[-num_test_samples:]
 
+# Shuffle training data
+X_train, t_train = shuffle(X_train, t_train)
 print(X_train.shape, t_train.shape, X_test.shape, t_test.shape)
 
-# LINEAR REGRESSION
+# Calculate 50-day moving avg for test data as baseline (ignore augmented
+# bias term)
+moving_avg = np.average(X_test[:, 1:], axis=1)
+
+# LINEAR REGRESSION-------------------------------------------------------
+# Hyperparameters
+lr_hyperparams = HyperParameters(
+    alpha=0.0,
+    batch_size=500,
+    max_epochs=60,
+    k=5,
+    decay=0.05)
+alpha_values = [0.2, 0.1, 0.05]
+
+# Perform training
 training_data_best, alpha_best, risk_best = k_fold_validation(
-    X_train, t_train, hyperparams, Algorithm.LR)
-hyperparams.alpha = alpha_best
+    Algorithm.LR, X_train, t_train, lr_hyperparams)
+lr_hyperparams.alpha = alpha_best
 
 # Perform testing by the weights yielding the best validation performance
 t_hat_test, _, test_risk = lr_predict(X_test, training_data_best[0], t_test)
 
-# t_hat_test, t_test = denormalize_data(Ys[-1], t_test, data_bounds)
+# Denormalize data to see actual stock prices instead of normalized values ranging from 0 to 1
+# t_hat_test, t_test = denormalize_data(t_hat_test, t_test, data_bounds)
 
-plot_graph(date_data[-num_test_samples:],
-           'date',
-           'AAPL stock price',
+plot_graph('date',
+           'AAPL stock price (normalized)',
            'lr/stock_price_predictions.jpg',
-           t_hat_test,
-           ydata2=t_test,
-           xdates=True,
-           ydata1label='predicted values',
-           ydata2label='actual values')
-plot_graph([i for i in range(len(training_data_best[3]))],
-           'number of epochs',
+           date_data[-num_test_samples:],
+           xdata_is_dates=True,
+           average={'label': '50-day moving average',
+                    'data': moving_avg,
+                    'color': 'green'},
+           actual={'label': 'actual values',
+                   'data': t_test,
+                   'color': 'red'},
+           predicted={'label': 'predicted values',
+                      'data': t_hat_test,
+                      'color': 'blue'})
+plot_graph('epoch',
            'training loss',
            'lr/learning_curve_training_loss.jpg',
-           training_data_best[3])
-plot_graph([i for i in range(len(training_data_best[4]))],
-           'number of epochs',
+           [i for i in range(len(training_data_best[3]))],
+           loss={'label': None,
+                 'data': training_data_best[3],
+                 'color': 'blue'})
+plot_graph('epoch',
            'validation risk',
            'lr/learning_curve_validation_risk.jpg',
-           training_data_best[4])
+           [i for i in range(len(training_data_best[4]))],
+           risk={'label': None,
+                 'data': training_data_best[4],
+                 'color': 'blue'})
 
 print('K-FOLD VALIDATION LINEAR REGRESSION******************************')
 print(
     'The value of hyperparameter alpha that yielded the best performance = {0}'.format(
-        hyperparams.alpha))
+        lr_hyperparams.alpha))
 print(
     'The associated average validation performance (risk) = {0}'.format(risk_best))
 print('The associated test performance (risk) = {0}'.format(test_risk))
 
-# MULTI-LAYER PERCEPTRON
+# MULTI-LAYER PERCEPTRON--------------------------------------------------
+# Hyperparameters
+mlp_hyperparams = HyperParameters(
+    alpha=0.0,
+    batch_size=500,
+    max_epochs=60,
+    k=5,
+    decay=0.01)
+alpha_values = [0.0025, 0.001, 0.00075]
+
 # Perform training
 training_data_best, alpha_best, risk_best = k_fold_validation(
-    X_train, t_train, hyperparams, Algorithm.MLP)
-hyperparams.alpha = alpha_best
+    Algorithm.MLP, X_train, t_train, mlp_hyperparams)
+mlp_hyperparams.alpha = alpha_best
 
 # Perform testing by the weights yielding the best validation performance
-Ys = do_forward_propagation(X_test, training_data_best[0])
+Ys = do_forward_pass(X_test, training_data_best[0])
 _, test_risk = calc_loss_and_risk(Ys, t_test)
 
-plot_graph(date_data[-num_test_samples:],
-           'date',
-           'AAPL stock price',
+# Denormalize data to see actual stock prices instead of normalized values ranging from 0 to 1
+# t_hat_test, t_test = denormalize_data(Ys[-1], t_test, data_bounds)
+
+plot_graph('date',
+           'AAPL stock price (normalized)',
            'mlp/stock_price_predictions.jpg',
-           Ys[-1],
-           ydata2=t_test,
-           xdates=True,
-           ydata1label='predicted values',
-           ydata2label='actual values')
-plot_graph([i for i in range(len(training_data_best[3]))],
-           'number of epochs',
+           date_data[-num_test_samples:],
+           xdata_is_dates=True,
+           average={'label': '50-day moving average',
+                    'data': moving_avg,
+                    'color': 'green'},
+           actual={'label': 'actual values',
+                   'data': t_test,
+                   'color': 'red'},
+           predicted={'label': 'predicted values',
+                      'data': Ys[-1],
+                      'color': 'blue'})
+plot_graph('epoch',
            'training loss',
            'mlp/learning_curve_training_loss.jpg',
-           training_data_best[3])
-plot_graph([i for i in range(len(training_data_best[4]))],
-           'number of epochs',
+           [i for i in range(len(training_data_best[3]))],
+           loss={'label': None,
+                 'data': training_data_best[3],
+                 'color': 'blue'})
+plot_graph('epoch',
            'validation risk',
            'mlp/learning_curve_validation_risk.jpg',
-           training_data_best[4])
+           [i for i in range(len(training_data_best[4]))],
+           risk={'label': None,
+                 'data': training_data_best[4],
+                 'color': 'blue'})
 
 print('K-FOLD VALIDATION MULTI-LAYER PERCEPTRON******************************')
 print(
     'The value of hyperparameter alpha that yielded the best performance = {0}'.format(
-        hyperparams.alpha))
+        mlp_hyperparams.alpha))
+print(
+    'The associated average validation performance (risk) = {0}'.format(risk_best))
+print('The associated test performance (risk) = {0}'.format(test_risk))
+
+# LSTM--------------------------------------------------------------------
+# Hyperparameters
+lstm_hyperparams = HyperParameters(
+    alpha=0.0,
+    batch_size=500,
+    max_epochs=60,
+    k=5,
+    decay=0.8)
+alpha_values = [0.5, 0.25, 0.1, 0.05]
+
+# Remove bias term from augmented data (bias is handled by tf.keras LSTM layer)
+X_train, X_test = X_train[:, 1:], X_test[:, 1:]
+
+# Perform training
+training_data_best, alpha_best, risk_best = k_fold_validation(
+    X_train, t_train, lstm_hyperparams, Algorithm.LSTM)
+lstm_hyperparams.alpha = alpha_best
+
+# Perform testing by the lstm model yielding the best validation performance
+t_hat_test, test_risk = lstm_predict(training_data_best[0], X_test, t_test)
+
+# Denormalize data to see actual stock prices instead of normalized values ranging from 0 to 1
+# t_hat_test, t_test = denormalize_data(t_hat_test, t_test, data_bounds)
+
+plot_graph('date',
+           'AAPL stock price (normalized)',
+           'lstm/stock_price_predictions.jpg',
+           date_data[-num_test_samples:],
+           xdata_is_dates=True,
+           average={'label': '50-day moving average',
+                    'data': moving_avg,
+                    'color': 'green'},
+           actual={'label': 'actual values',
+                   'data': t_test,
+                   'color': 'red'},
+           predicted={'label': 'predicted values',
+                      'data': t_hat_test,
+                      'color': 'blue'})
+plot_graph('epoch',
+           'training loss',
+           'lstm/learning_curve_training_loss.jpg',
+           [i for i in range(len(training_data_best[3]))],
+           loss={'label': None,
+                 'data': training_data_best[3],
+                 'color': 'blue'})
+plot_graph('epoch',
+           'validation risk',
+           'lstm/learning_curve_validation_risk.jpg',
+           [i for i in range(len(training_data_best[4]))],
+           risk={'label': None,
+                 'data': training_data_best[4],
+                 'color': 'blue'})
+
+print('K-FOLD VALIDATION LSTM******************************')
+print(
+    'The value of hyperparameter alpha that yielded the best performance = {0}'.format(
+        lstm_hyperparams.alpha))
 print(
     'The associated average validation performance (risk) = {0}'.format(risk_best))
 print('The associated test performance (risk) = {0}'.format(test_risk))

@@ -1,11 +1,14 @@
-from matplotlib import pyplot as plt
-from matplotlib import dates as pld
-# https://pypi.org/project/yfinance/
 import yfinance as yf
 import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib import dates as pld
 
 
 class HyperParameters:
+    '''
+    Simple class for storing hyperparameters.
+    '''
+
     def __init__(self, alpha, batch_size, decay, max_epochs, k):
         # Learning rate
         self.alpha = alpha
@@ -20,6 +23,9 @@ class HyperParameters:
 
 
 class Config:
+    '''
+    Simple class for defining dataset-related parameters.
+    '''
     TICKER = 'AAPL'
     N = 50
     S = 1
@@ -28,10 +34,14 @@ class Config:
 
 
 def get_data():
-    # Fetch historical data from yfinance (format: date, open, high, low,
-    # close, volume, dividends, stock splits)
+    '''
+    Fetches historical stock data from yfinance. Data comes in the format:
+    (date, open, high, low, close, volume, dividends, stock splits)
+
+    Source: https://pypi.org/project/yfinance/
+    '''
     data = yf.Ticker(Config.TICKER).history(period='max', auto_adjust=True)
-    # Save data
+    # Save data for future reference
     data.to_csv('data/AAPL_daily.csv')
     # Get necessary fields
     close_data = data.loc[:, Config.CLOSE_KEY].to_numpy()
@@ -40,7 +50,11 @@ def get_data():
 
 
 def preprocess_data(data_arr):
-    # Preprocess data - iterate chronologically
+    '''
+    Preprocesses data by gathering the closing price of the stock over the
+    previous 50 days for each day - these are the features, and then the
+    actual closing price for the corresponding day - this is the target.
+    '''
     # Get closing price of stock for previous 50 days as features
     X = np.array([data_arr[i - Config.N:i]
                  for i in range(Config.N, len(data_arr))], dtype='float64')
@@ -51,7 +65,9 @@ def preprocess_data(data_arr):
 
 
 def normalize_data(X, t):
-    # Normalize data
+    '''
+    Normalizes data to the range [0, 1].
+    '''
     min_val, max_val = np.min(t), np.max(t)
     X = (X - min_val) / max_val
     t = (t - min_val) / max_val
@@ -59,6 +75,10 @@ def normalize_data(X, t):
 
 
 def denormalize_data(t_hat, t, norm_params):
+    '''
+    Denormalizes data to convert normalized stock prices to actual stock
+    prices.
+    '''
     min_val, max_val = norm_params
     t_hat = t_hat * max_val + min_val
     t = t * max_val + min_val
@@ -66,59 +86,47 @@ def denormalize_data(t_hat, t, norm_params):
 
 
 def plot_graph(
-        xdata,
         xlabel,
         ylabel,
         filename,
-        ydata1,
-        ydata2=None,
-        ydata1label=None,
-        ydata2label=None,
-        xdates=False):
-    def conv_dates(d):
-        return pld.date2num(d)
-
+        xdata,
+        xdata_is_dates=False,
+        **kwargs):
+    '''
+    Plots a graph.
+    '''
     plt.figure()
 
-    # Use dates to label the x-axis if necessary
-    if xdates:
+    ax = plt.axes()
+    if xdata_is_dates:
+        # Use dates to label values on the x-axis
+        def conv_dates(d):
+            return pld.date2num(d)
         conv_dates_vec = np.vectorize(conv_dates)
-        xdata = conv_dates_vec(xdata)
 
+        xdata = conv_dates_vec(xdata)
         xtick_locator = pld.AutoDateLocator()
         xtick_formatter = pld.AutoDateFormatter(xtick_locator)
-        ax = plt.axes()
         ax.xaxis.set_major_locator(xtick_locator)
         ax.xaxis.set_major_formatter(xtick_formatter)
 
-    plt.scatter(
-        xdata,
-        ydata1,
-        color='blue',
-        s=Config.S,
-        label=ydata1label) if ydata1label else plt.scatter(
-        xdata,
-        ydata1,
-        color='blue',
-        s=Config.S)
-    if ydata2 is not None:
-        plt.scatter(
-            xdata,
-            ydata2,
-            color='red',
-            s=Config.S,
-            label=ydata2label) if ydata2label else plt.scatter(
-            xdata,
-            ydata2,
-            color='red',
-            s=Config.S)
+    # Plot datasets
+    show_legend = False
+    for _, value in kwargs.items():
+        label, ydata, color = value['label'], value['data'], value['color']
+        if label:
+            show_legend = True
+            plt.scatter(xdata, ydata, color=color, s=Config.S, label=label)
+        else:
+            plt.scatter(xdata, ydata, color=color, s=Config.S)
 
-    if ydata1label or ydata2label:
+    if show_legend:
         plt.legend()
 
     # Rotate date labels
-    if xdates:
-        [l.set_rotation(30) for l in ax.get_xticklabels()]
+    if xdata_is_dates:
+        for xticklabel in ax.get_xticklabels():
+            xticklabel.set_rotation(30)
 
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
