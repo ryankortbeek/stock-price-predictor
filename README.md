@@ -19,5 +19,5 @@ Data was retreived from the [Yahoo Finance Python Package](https://pypi.org/proj
    - one input layer
    - one hidden layer
    - one output layer
-3. [LSTM artifical neural network]
+3. [LSTM recurrant neural network](/lstm.py)
    - one lstm layer
