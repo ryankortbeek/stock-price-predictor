@@ -1,9 +1,10 @@
 import numpy as np
 
 
-def init_neural_network(dims):
+def _init_neural_network(dims):
     '''
-    Initializes the weights for a fully connected neural network. Augments weights to include bias term.
+    Randomly initializes the weights for a fully connected neural network.
+    Augments weights to include bias term.
 
     w_l1: l1_dim x l2_dim
     w_l2: l2_dim x 1
@@ -12,10 +13,11 @@ def init_neural_network(dims):
     return w
 
 
-def do_forward_propagation(X, w):
+def do_forward_pass(X, w):
     '''
-    Performs forward propagation. Iterates over the layers in the neural network
-    and computes the prediction.
+    Performs a forward pass through the neural network. Iterates over the
+    layers in the neural network and computes the prediction. Uses sigmoid
+    activation.
     '''
     def sigmoid(z):
         return 1 / (1 + np.exp(-z))
@@ -23,19 +25,18 @@ def do_forward_propagation(X, w):
 
     Ys = [X]
     for i in range(len(w)):
-        Ys.append(sigmoid_v(Ys[i].dot(w[i])))
+        Ys.append(sigmoid_v(np.matmul(Ys[i], w[i])))
     return Ys
 
 
-def calc_loss_and_risk(Ys, t, loss_as_vec=False):
+def calc_loss_and_risk(Ys, t):
     '''
-    Calculates the loss (using mean square error) and risk (using mean absolute difference) associated with Ys.
+    Calculates the loss (using mean square error) and risk (using mean
+    absolute difference) associated with Ys.
     '''
     t = np.reshape(t, [t.shape[0], 1])
-
     # Mean square error
-    loss = (1 / Ys[-1].shape[0]) * (Ys[-1] - t) ** 2 if loss_as_vec else (1 / \
-            Ys[-1].shape[0]) * np.linalg.norm(Ys[-1] - t, 2) ** 2
+    loss = (1 / Ys[-1].shape[0]) * np.linalg.norm(Ys[-1] - t, 2) ** 2
     # Mean absolute difference
     risk = (1 / Ys[-1].shape[0]) * np.linalg.norm(np.absolute(Ys[-1] - t), 1)
     return loss, risk
@@ -43,25 +44,38 @@ def calc_loss_and_risk(Ys, t, loss_as_vec=False):
 
 def do_backward_propagation(w, Ys, t):
     '''
-    Performs gradient descent using back propagation.
+    Calculates dws to use in gradient descent using back propagation.
     '''
     def signmoid_derivative(y):
-        return y * (1 - y)
+        y_sigmoid = 1 / (1 + np.exp(-y))
+        return y_sigmoid * (1 - y_sigmoid)
     sigmoid_derivative_v = np.vectorize(signmoid_derivative)
+    loss, _ = calc_loss_and_risk(Ys, t)
 
-    loss, _ = calc_loss_and_risk(Ys, t, loss_as_vec=True)
-
-    dws = [loss * sigmoid_derivative_v(Ys[-1])]
-    for i in range(len(w) - 1, 0, -1):
-        dws.append(np.dot(dws[-1], np.transpose(w[i]))
-                   * sigmoid_derivative_v(Ys[i]))
+    # Derivative of loss function - mean square error
+    loss_derivative = (2 / Ys[-1].shape[0]) * np.linalg.norm(Ys[-1] - t, 2)
+    dzs = [loss_derivative * sigmoid_derivative_v(Ys[-1])]
+    dws = []
+    for i in range(len(w) - 1, -1, -1):
+        dws.append(np.matmul(np.transpose(Ys[i]), dzs[-1]))
+        # Derivative of loss function - mean square error
+        loss_derivative = (2 / Ys[-1].shape[0]) * np.linalg.norm(Ys[-1] - t, 2)
+        dzs.append(loss_derivative * sigmoid_derivative_v(dzs[-1]))
     return dws, loss
 
 
 def mlp_train(X_train, t_train, X_val, t_val, hyperparams):
+    '''
+    Train a multi-layer perceptron using mini-batch gradient descent via
+    back propagation with l2-regularization.
+    '''
     # Dimensions in the format [input layer, hidden layer, output layer]
-    neural_network_dims = [X_train.shape[1], X_train.shape[1] // 2, 1]
-    w = init_neural_network(neural_network_dims)
+    # https://stats.stackexchange.com/questions/181/how-to-choose-the-number-of-hidden-layers-and-nodes-in-a-feedforward-neural-netw
+    neural_network_dims = [
+        X_train.shape[1],
+        X_train.shape[1] // 2,
+        1]
+    w = _init_neural_network(neural_network_dims)
 
     losses_train = []
     risks_val = []
@@ -86,25 +100,27 @@ def mlp_train(X_train, t_train, X_val, t_val, hyperparams):
                                                       1) *
                               hyperparams.batch_size]
 
-            Ys = do_forward_propagation(X_batch, w)
+            Ys = do_forward_pass(X_batch, w)
             dws, loss = do_backward_propagation(w, Ys, t_batch)
-            loss_this_epoch += np.linalg.norm(loss, 1)
+            dws = dws[::-1]
+            loss_this_epoch += loss
             # Mini-batch gradient descent (dws is in reverse order)
             for i in range(len(w)):
                 # Use l2 regularization
-                w[i] -= hyperparams.alpha * \
-                    (np.dot(np.transpose(Ys[i]), dws[-(i + 1)]) + hyperparams.decay * w[i])
+                w[i] -= hyperparams.alpha * dws[i] + \
+                    (hyperparams.decay * w[i])
 
         # Compute the training loss by averaging loss_this_epoch
         training_loss = loss_this_epoch / num_batches
         losses_train.append(training_loss)
+
         # Perform validation on the validation set by the risk
-        Ys = do_forward_propagation(X_val, w)
+        Ys = do_forward_pass(X_val, w)
         _, risk = calc_loss_and_risk(Ys, t_val)
         risks_val.append(risk)
+
         # Keep track of the best validation epoch, risk, and the weights
         if risk < risk_best:
-            w_best = w
-            risk_best, epoch_best = risk, epoch
+            w_best, risk_best, epoch_best = w, risk, epoch
 
     return w_best, risk_best, epoch_best, losses_train, risks_val
