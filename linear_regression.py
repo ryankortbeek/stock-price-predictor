@@ -3,9 +3,9 @@ import numpy as np
 
 def lr_predict(X, w, t):
     '''
-    LINEAR REGRESSION
-    Given X, w, and t, predicts t_hat and calculates the corresponding loss (using mean square error)
-    and risk (using mean absolute difference).
+    Given X, w, and t, predicts t_hat and calculates the corresponding
+    loss (using mean square error) and risk (using mean absolute
+    difference).
 
     X_new: N x (d + 1)
     w: (d + 1) x 1
@@ -22,16 +22,14 @@ def lr_predict(X, w, t):
 
 def lr_train(X_train, t_train, X_val, t_val, hyperparams):
     '''
-    LINEAR REGRESSION
-    Performs training and validation on the respective datasets passed in using mini-batch gradient
-    descent with l2-regularization.
+    Performs training and validation on the respective datasets passed in
+    using mini-batch gradient descent with l2-regularization.
 
     X_train: N_train x (d + 1)
     t_train: N_train x 1
     X_val: N_val x (d + 1)
     t_val: N_val x 1
     '''
-
     # Initialize weights randomly, w: (d + 1) x 1
     w = np.random.rand(X_train.shape[1])
 
@@ -73,9 +71,11 @@ def lr_train(X_train, t_train, X_val, t_val, hyperparams):
         # Compute the training loss by averaging loss_this_epoch
         training_loss = loss_this_epoch / num_batches
         losses_train.append(training_loss)
+
         # Perform validation on the validation set by the risk
         _, _, risk_val = lr_predict(X_val, w, t_val)
         risks_val.append(risk_val)
+
         # Keep track of the best validation epoch, risk, and the weights
         if risk_val < risk_best:
             w_best, risk_best, epoch_best = w, risk_val, epoch
