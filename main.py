@@ -86,6 +86,67 @@ print(X_train.shape, t_train.shape, X_test.shape, t_test.shape)
 # bias term)
 moving_avg = np.average(X_test[:, 1:], axis=1)
 
+# LSTM--------------------------------------------------------------------
+# Hyperparameters
+lstm_hyperparams = HyperParameters(
+    alpha=0.0,
+    batch_size=500,
+    max_epochs=60,
+    k=5,
+    decay=0.8)
+alpha_values = [0.5, 0.25, 0.1, 0.05]
+
+# Remove bias term from augmented data (bias is handled by tf.keras LSTM layer)
+X_train, X_test = X_train[:, 1:], X_test[:, 1:]
+
+# Perform training
+training_data_best, alpha_best, risk_best = k_fold_validation(
+    X_train, t_train, lstm_hyperparams, Algorithm.LSTM)
+lstm_hyperparams.alpha = alpha_best
+
+# Perform testing by the lstm model yielding the best validation performance
+t_hat_test, test_risk = lstm_predict(training_data_best[0], X_test, t_test)
+
+# Denormalize data to see actual stock prices instead of normalized values ranging from 0 to 1
+# t_hat_test, t_test = denormalize_data(t_hat_test, t_test, data_bounds)
+
+plot_graph('date',
+           'AAPL stock price (normalized)',
+           'lstm/stock_price_predictions.jpg',
+           date_data[-num_test_samples:],
+           xdata_is_dates=True,
+           average={'label': '50-day moving average',
+                    'data': moving_avg,
+                    'color': 'green'},
+           actual={'label': 'actual values',
+                   'data': t_test,
+                   'color': 'red'},
+           predicted={'label': 'predicted values',
+                      'data': t_hat_test,
+                      'color': 'blue'})
+plot_graph('epoch',
+           'training loss',
+           'lstm/learning_curve_training_loss.jpg',
+           [i for i in range(len(training_data_best[3]))],
+           loss={'label': None,
+                 'data': training_data_best[3],
+                 'color': 'blue'})
+plot_graph('epoch',
+           'validation risk',
+           'lstm/learning_curve_validation_risk.jpg',
+           [i for i in range(len(training_data_best[4]))],
+           risk={'label': None,
+                 'data': training_data_best[4],
+                 'color': 'blue'})
+
+print('K-FOLD VALIDATION LSTM******************************')
+print(
+    'The value of hyperparameter alpha that yielded the best performance = {0}'.format(
+        lstm_hyperparams.alpha))
+print(
+    'The associated average validation performance (risk) = {0}'.format(risk_best))
+print('The associated test performance (risk) = {0}'.format(test_risk))
+
 # LINEAR REGRESSION-------------------------------------------------------
 # Hyperparameters
 lr_hyperparams = HyperParameters(
@@ -148,7 +209,7 @@ print('The associated test performance (risk) = {0}'.format(test_risk))
 # Hyperparameters
 mlp_hyperparams = HyperParameters(
     alpha=0.0,
-    batch_size=500,
+    batch_size=200,
     max_epochs=60,
     k=5,
     decay=0.01)
@@ -199,67 +260,6 @@ print('K-FOLD VALIDATION MULTI-LAYER PERCEPTRON******************************')
 print(
     'The value of hyperparameter alpha that yielded the best performance = {0}'.format(
         mlp_hyperparams.alpha))
-print(
-    'The associated average validation performance (risk) = {0}'.format(risk_best))
-print('The associated test performance (risk) = {0}'.format(test_risk))
-
-# LSTM--------------------------------------------------------------------
-# Hyperparameters
-lstm_hyperparams = HyperParameters(
-    alpha=0.0,
-    batch_size=500,
-    max_epochs=60,
-    k=5,
-    decay=0.8)
-alpha_values = [0.5, 0.25, 0.1, 0.05]
-
-# Remove bias term from augmented data (bias is handled by tf.keras LSTM layer)
-X_train, X_test = X_train[:, 1:], X_test[:, 1:]
-
-# Perform training
-training_data_best, alpha_best, risk_best = k_fold_validation(
-    X_train, t_train, lstm_hyperparams, Algorithm.LSTM)
-lstm_hyperparams.alpha = alpha_best
-
-# Perform testing by the lstm model yielding the best validation performance
-t_hat_test, test_risk = lstm_predict(training_data_best[0], X_test, t_test)
-
-# Denormalize data to see actual stock prices instead of normalized values ranging from 0 to 1
-# t_hat_test, t_test = denormalize_data(t_hat_test, t_test, data_bounds)
-
-plot_graph('date',
-           'AAPL stock price (normalized)',
-           'lstm/stock_price_predictions.jpg',
-           date_data[-num_test_samples:],
-           xdata_is_dates=True,
-           average={'label': '50-day moving average',
-                    'data': moving_avg,
-                    'color': 'green'},
-           actual={'label': 'actual values',
-                   'data': t_test,
-                   'color': 'red'},
-           predicted={'label': 'predicted values',
-                      'data': t_hat_test,
-                      'color': 'blue'})
-plot_graph('epoch',
-           'training loss',
-           'lstm/learning_curve_training_loss.jpg',
-           [i for i in range(len(training_data_best[3]))],
-           loss={'label': None,
-                 'data': training_data_best[3],
-                 'color': 'blue'})
-plot_graph('epoch',
-           'validation risk',
-           'lstm/learning_curve_validation_risk.jpg',
-           [i for i in range(len(training_data_best[4]))],
-           risk={'label': None,
-                 'data': training_data_best[4],
-                 'color': 'blue'})
-
-print('K-FOLD VALIDATION LSTM******************************')
-print(
-    'The value of hyperparameter alpha that yielded the best performance = {0}'.format(
-        lstm_hyperparams.alpha))
 print(
     'The associated average validation performance (risk) = {0}'.format(risk_best))
 print('The associated test performance (risk) = {0}'.format(test_risk))
