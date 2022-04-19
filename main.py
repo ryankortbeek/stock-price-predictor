@@ -55,15 +55,13 @@ def k_fold_validation(algorithm, X_kfold, t_kfold, hyperparams):
 
         avg_risk = total_risk / hyperparams.k
         if avg_risk < risk_best:
-            risk_best = avg_risk
-            decay_best = hyperparams.decay
-            training_data_best = training_data_local
+            training_data_best, risk_best, decay_best = training_data_local, avg_risk, hyperparams.decay
 
     return training_data_best, decay_best, risk_best
 
 
 # MAIN CODE---------------------------------------------------------------
-num_test_samples = 1000
+num_test_samples = 1500
 w_best, epoch_best, risk_best = None, None, None
 
 # Get dataset
@@ -89,12 +87,12 @@ moving_avg = np.average(X_test[:, 1:], axis=1)
 # LSTM--------------------------------------------------------------------
 # Hyperparameters
 lstm_hyperparams = HyperParameters(
-    alpha=0.25,
+    alpha=0.03,
     batch_size=500,
     max_epochs=60,
     k=5,
     decay=0.0)
-decay_values = [0.8, 0.6, 0.4, 0.2]
+decay_values = [0.9, 0.85, 0.8]
 
 # Remove bias term from augmented data (bias is handled by tf.keras LSTM layer)
 X_train, X_test = X_train[:, 1:], X_test[:, 1:]
@@ -155,7 +153,7 @@ lr_hyperparams = HyperParameters(
     max_epochs=60,
     k=5,
     decay=0.0)
-decay_values = [0.2, 0.1, 0.05, 0.01]
+decay_values = [0.15, 0.1, 0.05, 0.01]
 
 # Perform training
 training_data_best, decay_best, risk_best = k_fold_validation(
@@ -208,12 +206,12 @@ print('The associated test performance (risk) = {0}'.format(test_risk))
 # MULTI-LAYER PERCEPTRON--------------------------------------------------
 # Hyperparameters
 mlp_hyperparams = HyperParameters(
-    alpha=0.0005,
-    batch_size=100,
+    alpha=0.0001,
+    batch_size=25,
     max_epochs=60,
     k=5,
     decay=0.0)
-decay_values = [0.1, 0.05, 0.01, 0.005]
+decay_values = [0.001, 0.0005]
 
 # Perform training
 training_data_best, decay_best, risk_best = k_fold_validation(
