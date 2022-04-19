@@ -21,10 +21,10 @@ def k_fold_validation(algorithm, X_kfold, t_kfold, hyperparams):
     Performs k-fold validation.
     '''
     risk_best = 10000
-    training_data_local, training_data_best, alpha_best = None, None, None
+    training_data_local, training_data_best, decay_best = None, None, None
 
-    for i in range(len(alpha_values)):
-        hyperparams.alpha = alpha_values[i]
+    for i in range(len(decay_values)):
+        hyperparams.decay = decay_values[i]
         total_risk = 0
         partition_size = X_kfold.shape[0] // hyperparams.k
 
@@ -56,10 +56,10 @@ def k_fold_validation(algorithm, X_kfold, t_kfold, hyperparams):
         avg_risk = total_risk / hyperparams.k
         if avg_risk < risk_best:
             risk_best = avg_risk
-            alpha_best = hyperparams.alpha
+            decay_best = hyperparams.decay
             training_data_best = training_data_local
 
-    return training_data_best, alpha_best, risk_best
+    return training_data_best, decay_best, risk_best
 
 
 # MAIN CODE---------------------------------------------------------------
@@ -89,20 +89,20 @@ moving_avg = np.average(X_test[:, 1:], axis=1)
 # LSTM--------------------------------------------------------------------
 # Hyperparameters
 lstm_hyperparams = HyperParameters(
-    alpha=0.0,
+    alpha=0.25,
     batch_size=500,
     max_epochs=60,
     k=5,
-    decay=0.8)
-alpha_values = [0.5, 0.25, 0.1, 0.05]
+    decay=0.0)
+decay_values = [0.8, 0.6, 0.4, 0.2]
 
 # Remove bias term from augmented data (bias is handled by tf.keras LSTM layer)
 X_train, X_test = X_train[:, 1:], X_test[:, 1:]
 
 # Perform training
-training_data_best, alpha_best, risk_best = k_fold_validation(
-    X_train, t_train, lstm_hyperparams, Algorithm.LSTM)
-lstm_hyperparams.alpha = alpha_best
+training_data_best, decay_best, risk_best = k_fold_validation(
+    Algorithm.LSTM, X_train, t_train, lstm_hyperparams)
+lstm_hyperparams.decay = decay_best
 
 # Perform testing by the lstm model yielding the best validation performance
 t_hat_test, test_risk = lstm_predict(training_data_best[0], X_test, t_test)
@@ -141,8 +141,8 @@ plot_graph('epoch',
 
 print('K-FOLD VALIDATION LSTM******************************')
 print(
-    'The value of hyperparameter alpha that yielded the best performance = {0}'.format(
-        lstm_hyperparams.alpha))
+    'The value of hyperparameter decay that yielded the best performance = {0}'.format(
+        lstm_hyperparams.decay))
 print(
     'The associated average validation performance (risk) = {0}'.format(risk_best))
 print('The associated test performance (risk) = {0}'.format(test_risk))
@@ -150,17 +150,17 @@ print('The associated test performance (risk) = {0}'.format(test_risk))
 # LINEAR REGRESSION-------------------------------------------------------
 # Hyperparameters
 lr_hyperparams = HyperParameters(
-    alpha=0.0,
+    alpha=0.05,
     batch_size=500,
     max_epochs=60,
     k=5,
-    decay=0.05)
-alpha_values = [0.2, 0.1, 0.05]
+    decay=0.0)
+decay_values = [0.2, 0.1, 0.05, 0.01]
 
 # Perform training
-training_data_best, alpha_best, risk_best = k_fold_validation(
+training_data_best, decay_best, risk_best = k_fold_validation(
     Algorithm.LR, X_train, t_train, lr_hyperparams)
-lr_hyperparams.alpha = alpha_best
+lr_hyperparams.decay = decay_best
 
 # Perform testing by the weights yielding the best validation performance
 t_hat_test, _, test_risk = lr_predict(X_test, training_data_best[0], t_test)
@@ -199,8 +199,8 @@ plot_graph('epoch',
 
 print('K-FOLD VALIDATION LINEAR REGRESSION******************************')
 print(
-    'The value of hyperparameter alpha that yielded the best performance = {0}'.format(
-        lr_hyperparams.alpha))
+    'The value of hyperparameter decay that yielded the best performance = {0}'.format(
+        lr_hyperparams.decay))
 print(
     'The associated average validation performance (risk) = {0}'.format(risk_best))
 print('The associated test performance (risk) = {0}'.format(test_risk))
@@ -208,17 +208,17 @@ print('The associated test performance (risk) = {0}'.format(test_risk))
 # MULTI-LAYER PERCEPTRON--------------------------------------------------
 # Hyperparameters
 mlp_hyperparams = HyperParameters(
-    alpha=0.0,
-    batch_size=200,
+    alpha=0.0005,
+    batch_size=100,
     max_epochs=60,
     k=5,
-    decay=0.01)
-alpha_values = [0.0025, 0.001, 0.00075]
+    decay=0.0)
+decay_values = [0.1, 0.05, 0.01, 0.005]
 
 # Perform training
-training_data_best, alpha_best, risk_best = k_fold_validation(
+training_data_best, decay_best, risk_best = k_fold_validation(
     Algorithm.MLP, X_train, t_train, mlp_hyperparams)
-mlp_hyperparams.alpha = alpha_best
+mlp_hyperparams.decay = decay_best
 
 # Perform testing by the weights yielding the best validation performance
 Ys = do_forward_pass(X_test, training_data_best[0])
@@ -258,8 +258,8 @@ plot_graph('epoch',
 
 print('K-FOLD VALIDATION MULTI-LAYER PERCEPTRON******************************')
 print(
-    'The value of hyperparameter alpha that yielded the best performance = {0}'.format(
-        mlp_hyperparams.alpha))
+    'The value of hyperparameter decay that yielded the best performance = {0}'.format(
+        mlp_hyperparams.decay))
 print(
     'The associated average validation performance (risk) = {0}'.format(risk_best))
 print('The associated test performance (risk) = {0}'.format(test_risk))
