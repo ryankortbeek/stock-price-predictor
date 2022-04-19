@@ -55,6 +55,6 @@ def lstm_predict(model, X_test, t_test):
     '''
     t_hat = model(X_test)
     # Mean absolute difference
-    risk = (1 / t_hat.shape[0]) * \
-        np.linalg.norm(np.absolute(t_hat - t_test), 1)
-    return t_hat, risk
+    mae = keras.metrics.MeanAbsoluteError()
+    mae.update_state(t_hat, t_test)
+    return t_hat, mae.result().numpy()
