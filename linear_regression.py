@@ -4,7 +4,7 @@ import numpy as np
 def lr_predict(X, w, t):
     '''
     Given X, w, and t, predicts t_hat and calculates the corresponding
-    loss (using mean square error) and risk (using mean absolute
+    loss (using mean squared error) and risk (using mean absolute
     difference).
 
     X_new: N x (d + 1)
@@ -12,7 +12,7 @@ def lr_predict(X, w, t):
     t: N x 1
     '''
     t_hat = np.matmul(X, w)
-    # Mean square error
+    # Mean squared error
     loss = (1 / (2 * t.shape[0])) * np.linalg.norm(t_hat - t, 2) ** 2
     # Mean absolute difference
     risk = (1 / t.shape[0]) * np.linalg.norm(np.absolute(t_hat - t), 1)

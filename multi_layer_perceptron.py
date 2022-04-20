@@ -31,11 +31,11 @@ def do_forward_pass(X, w):
 
 def calc_loss_and_risk(Ys, t):
     '''
-    Calculates the loss (using mean square error) and risk (using mean
+    Calculates the loss (using mean squared error) and risk (using mean
     absolute difference) associated with Ys.
     '''
     t = np.reshape(t, [t.shape[0], 1])
-    # Mean square error
+    # mean squared error
     loss = (1 / Ys[-1].shape[0]) * np.linalg.norm(Ys[-1] - t, 2) ** 2
     # Mean absolute difference
     risk = (1 / Ys[-1].shape[0]) * np.linalg.norm(np.absolute(Ys[-1] - t), 1)
@@ -52,13 +52,13 @@ def do_backward_propagation(w, Ys, t):
     sigmoid_derivative_v = np.vectorize(signmoid_derivative)
     loss, _ = calc_loss_and_risk(Ys, t)
 
-    # Derivative of loss function - mean square error
+    # Derivative of loss function - mean squared error
     loss_derivative = (2 / Ys[-1].shape[0]) * np.linalg.norm(Ys[-1] - t, 2)
     dzs = [loss_derivative * sigmoid_derivative_v(Ys[-1])]
     dws = []
     for i in range(len(w) - 1, -1, -1):
         dws.append(np.matmul(np.transpose(Ys[i]), dzs[-1]))
-        # Derivative of loss function - mean square error
+        # Derivative of loss function - mean squared error
         loss_derivative = (2 / Ys[-1].shape[0]) * np.linalg.norm(Ys[-1] - t, 2)
         dzs.append(loss_derivative * sigmoid_derivative_v(dzs[-1]))
     return dws, loss
