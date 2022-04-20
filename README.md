@@ -4,8 +4,8 @@ A suite of machine learning algorithms trained on historical data corresponding 
 
 ## Disclaimer
 
-- The predictions made by the machine learning algorithms implemented in this repository are not guaranteed to be accurate, truthful, or correct whatsoever
-- They should not be considered or used when making any financial decision
+- Predictions made by the machine learning algorithms implemented in this repository are not guaranteed to be accurate, truthful, or correct whatsoever
+- Predictions should not be considered or used when making any financial decision
 - Predictions are not intended to act as financial advice in any means
 
 ## Implemented Machine Learning Algorithms
