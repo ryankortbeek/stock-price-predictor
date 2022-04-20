@@ -91,7 +91,7 @@ lstm_hyperparams = HyperParameters(
     batch_size=500,
     max_epochs=60,
     k=5,
-    decay=0.0)
+    decay=0.8)
 decay_values = [0.9, 0.85, 0.8]
 
 # Remove bias term from augmented data (bias is handled by tf.keras LSTM layer)
@@ -119,18 +119,18 @@ plot_graph('date',
            actual={'label': 'actual values',
                    'data': t_test,
                    'color': 'red'},
-           predicted={'label': 'predicted values',
+           predicted={'label': 'LSTM predicted values',
                       'data': t_hat_test,
                       'color': 'blue'})
 plot_graph('epoch',
-           'training loss',
+           'LSTM training loss',
            'lstm/learning_curve_training_loss.jpg',
            [i for i in range(len(training_data_best[3]))],
            loss={'label': None,
                  'data': training_data_best[3],
                  'color': 'blue'})
 plot_graph('epoch',
-           'validation risk',
+           'LSTM validation risk',
            'lstm/learning_curve_validation_risk.jpg',
            [i for i in range(len(training_data_best[4]))],
            risk={'label': None,
@@ -152,7 +152,7 @@ lr_hyperparams = HyperParameters(
     batch_size=500,
     max_epochs=60,
     k=5,
-    decay=0.0)
+    decay=0.05)
 decay_values = [0.15, 0.1, 0.05, 0.01]
 
 # Perform training
@@ -177,18 +177,18 @@ plot_graph('date',
            actual={'label': 'actual values',
                    'data': t_test,
                    'color': 'red'},
-           predicted={'label': 'predicted values',
+           predicted={'label': 'LR predicted values',
                       'data': t_hat_test,
                       'color': 'blue'})
 plot_graph('epoch',
-           'training loss',
+           'LR training loss',
            'lr/learning_curve_training_loss.jpg',
            [i for i in range(len(training_data_best[3]))],
            loss={'label': None,
                  'data': training_data_best[3],
                  'color': 'blue'})
 plot_graph('epoch',
-           'validation risk',
+           'LR validation risk',
            'lr/learning_curve_validation_risk.jpg',
            [i for i in range(len(training_data_best[4]))],
            risk={'label': None,
@@ -210,7 +210,7 @@ mlp_hyperparams = HyperParameters(
     batch_size=25,
     max_epochs=60,
     k=5,
-    decay=0.0)
+    decay=0.0005)
 decay_values = [0.001, 0.0005]
 
 # Perform training
@@ -236,18 +236,18 @@ plot_graph('date',
            actual={'label': 'actual values',
                    'data': t_test,
                    'color': 'red'},
-           predicted={'label': 'predicted values',
+           predicted={'label': 'MLP predicted values',
                       'data': Ys[-1],
                       'color': 'blue'})
 plot_graph('epoch',
-           'training loss',
+           'MLP training loss',
            'mlp/learning_curve_training_loss.jpg',
            [i for i in range(len(training_data_best[3]))],
            loss={'label': None,
                  'data': training_data_best[3],
                  'color': 'blue'})
 plot_graph('epoch',
-           'validation risk',
+           'MLP validation risk',
            'mlp/learning_curve_validation_risk.jpg',
            [i for i in range(len(training_data_best[4]))],
            risk={'label': None,
