@@ -2,6 +2,12 @@
 
 A suite of machine learning algorithms trained on historical data corresponding to the Apple stock (ticker: AAPL). Each model "analyzes" the previous 50 closing prices of a stock and predicts the next closing price.
 
+## Disclaimer
+
+- The predictions made by the machine learning algorithms implemented in this repository are not guaranteed to be accurate, truthful, or correct whatsoever
+- They should not be considered or used when making any financial decision
+- Predictions are not intended to act as financial advice in any means
+
 ## Implemented Machine Learning Algorithms
 
 1. [Linear regression (LR)](/linear_regression.py)
@@ -37,6 +43,8 @@ The results of the trained MLP model on the test data can be seen in the image b
 ## Dataset
 
 The dataset used for training, validation, and testing was retreived from [Yahoo Finance](https://ca.finance.yahoo.com) via the [Yahoo Finance Python Package](https://pypi.org/project/yfinance/).
+
+See [here](https://github.com/ryankortbeek/stock-price-predictor/blob/ec6bfb9da56ff8b3b476b1df7ca4e346a8568f37/util.py#L36) for how this is done.
 
 ## Loss Function
 
